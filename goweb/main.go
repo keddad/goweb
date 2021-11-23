@@ -10,9 +10,11 @@ import (
 func main() {
 	var port int
 	var base_folder string
+	var gzip bool
 
 	flag.StringVar(&base_folder, "f", "", "Folder to serve files from")
 	flag.IntVar(&port, "p", 0, "Port to use")
+	flag.BoolVar(&gzip, "g", false, "Whether to use gzip, if client supports it")
 	flag.Parse()
 
 	if base_folder == "" {
@@ -25,7 +27,7 @@ func main() {
 
 	fmt.Printf("Starting goweb at %d", port)
 
-	if err := http.ListenAndServe(":8080", FileServer{base_folder}); err != nil {
+	if err := http.ListenAndServe(":8080", FileServer{base_folder, gzip}); err != nil {
 		log.Fatal(err)
 	}
 

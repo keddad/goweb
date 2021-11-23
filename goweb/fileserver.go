@@ -1,15 +1,19 @@
 package main
 
 import (
+	"bytes"
+	"compress/gzip"
 	"errors"
 	"log"
 	"net/http"
 	"os"
 	"path"
+	"strings"
 )
 
 type FileServer struct {
 	baseFolder string
+	gzip       bool
 }
 
 func (f FileServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -20,7 +24,10 @@ func (f FileServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	targetPath := path.Join(f.baseFolder, r.URL.Path)
 
-	// TODO Check for ..
+	if !path.IsAbs(targetPath) { // Actually it looks like path.Join somehow kills .. related exploits
+		w.WriteHeader(403)
+		return
+	}
 
 	file, err := os.ReadFile(targetPath)
 
@@ -36,6 +43,24 @@ func (f FileServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Write(file)
+	if f.gzip && strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
+		var buf bytes.Buffer
+		zw := gzip.NewWriter(&buf)
+		defer zw.Close()
+
+		_, err := zw.Write(file)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		if err := zw.Close(); err != nil {
+			log.Fatal(err)
+		}
+
+		w.Header().Add("Content-Encoding", "gzip") // Should go before w.Write, or add w.WriteHeader
+		w.Write(buf.Bytes())
+	} else {
+		w.Write(file)
+	}
 	return
 }
