@@ -1,14 +1,27 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log"
 	"net/http"
 )
 
 func main() {
-	var port = 8080
-	var base_folder = "/home/keddad/"
+	var port int
+	var base_folder string
+
+	flag.StringVar(&base_folder, "f", "", "Folder to serve files from")
+	flag.IntVar(&port, "p", 0, "Port to use")
+	flag.Parse()
+
+	if base_folder == "" {
+		log.Fatal("Empty base folder!")
+	}
+
+	if port <= 0 || port > 65536 {
+		log.Fatal("Invalid port, or no port specified")
+	}
 
 	fmt.Printf("Starting goweb at %d", port)
 
